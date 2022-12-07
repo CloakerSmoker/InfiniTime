@@ -43,19 +43,19 @@ WatchFaceTerminal::WatchFaceTerminal(DisplayApp* app,
 
   label_date = lv_label_create(lv_scr_act(), nullptr);
   lv_label_set_recolor(label_date, true);
-  lv_obj_align(label_date, lv_scr_act(), LV_ALIGN_IN_LEFT_MID, 0, -40);
+  lv_obj_align(label_date, lv_scr_act(), LV_ALIGN_IN_LEFT_MID, 0, -60);
 
   label_prompt_1 = lv_label_create(lv_scr_act(), nullptr);
   lv_obj_align(label_prompt_1, lv_scr_act(), LV_ALIGN_IN_LEFT_MID, 0, -80);
-  lv_label_set_text_static(label_prompt_1, "user@watch:~ $ now");
+  lv_label_set_text_static(label_prompt_1, "watch@wrist ~> now");
 
   label_prompt_2 = lv_label_create(lv_scr_act(), nullptr);
   lv_obj_align(label_prompt_2, lv_scr_act(), LV_ALIGN_IN_LEFT_MID, 0, 60);
-  lv_label_set_text_static(label_prompt_2, "user@watch:~ $");
+  lv_label_set_text_static(label_prompt_2, "watch@wrist ~> ");
 
   label_time = lv_label_create(lv_scr_act(), nullptr);
   lv_label_set_recolor(label_time, true);
-  lv_obj_align(label_time, lv_scr_act(), LV_ALIGN_IN_LEFT_MID, 0, -60);
+  lv_obj_align(label_time, lv_scr_act(), LV_ALIGN_IN_LEFT_MID, 0, -40);
 
   heartbeatValue = lv_label_create(lv_scr_act(), nullptr);
   lv_label_set_recolor(heartbeatValue, true);
@@ -74,13 +74,45 @@ WatchFaceTerminal::~WatchFaceTerminal() {
   lv_obj_clean(lv_scr_act());
 }
 
+bool WatchFaceTerminal::OnTouchEvent(Pinetime::Applications::TouchEvents event) {
+  if (event == Pinetime::Applications::TouchEvents::SwipeLeft) {
+    dumbMode = !dumbMode;
+
+    if (dumbMode) {
+      lv_label_set_text_static(label_prompt_1, "$ systemd-watchd");
+      lv_label_set_text_static(label_prompt_2, "$ ");
+    }
+    else {
+      lv_label_set_text_static(label_prompt_1, "watch@wrist ~> now");
+      lv_label_set_text_static(label_prompt_2, "watch@wrist ~> ");
+    }
+
+    batteryPercentRemaining.MakeDirty();
+    currentDateTime.MakeDirty();
+    currentYear = 0;
+    stepCount.MakeDirty();
+
+    Refresh();
+    return true;
+  }
+
+  return false;
+}
+
 void WatchFaceTerminal::Refresh() {
   powerPresent = batteryController.IsPowerPresent();
   batteryPercentRemaining = batteryController.PercentRemaining();
-  if (batteryPercentRemaining.IsUpdated() || powerPresent.IsUpdated()) {
-    lv_label_set_text_fmt(batteryValue, "[BATT]#387b54 %d%%", batteryPercentRemaining.Get());
-    if (batteryController.IsPowerPresent()) {
-      lv_label_ins_text(batteryValue, LV_LABEL_POS_LAST, " Charging");
+
+
+  if (dumbMode) {
+    lv_label_set_text_fmt(batteryValue, "[BUTT]#387b54 FLAT");
+  }
+  else {
+    if (batteryPercentRemaining.IsUpdated() || powerPresent.IsUpdated()) {
+      lv_label_set_text_fmt(batteryValue, "[BUTT]#387b54 %d%%", batteryPercentRemaining.Get());
+      if (batteryController.IsPowerPresent()) {
+        lv_label_ins_text(batteryValue, LV_LABEL_POS_LAST, " Charging");
+      }
     }
   }
 
@@ -88,12 +120,12 @@ void WatchFaceTerminal::Refresh() {
   bleRadioEnabled = bleController.IsRadioEnabled();
   if (bleState.IsUpdated() || bleRadioEnabled.IsUpdated()) {
     if (!bleRadioEnabled.Get()) {
-      lv_label_set_text_static(connectState, "[STAT]#0082fc Disabled#");
+      lv_label_set_text_static(connectState, "[BLE ]#0082fc Disabled#");
     } else {
       if (bleState.Get()) {
-        lv_label_set_text_static(connectState, "[STAT]#0082fc Connected#");
+        lv_label_set_text_static(connectState, "[BLE ]#0082fc Connected#");
       } else {
-        lv_label_set_text_static(connectState, "[STAT]#0082fc Disconnected#");
+        lv_label_set_text_static(connectState, "[BLE ]#0082fc Disconnected#");
       }
     }
   }
@@ -101,10 +133,14 @@ void WatchFaceTerminal::Refresh() {
   notificationState = notificationManager.AreNewNotificationsAvailable();
   if (notificationState.IsUpdated()) {
     if (notificationState.Get()) {
-      lv_label_set_text_static(notificationIcon, "You have mail.");
+      lv_label_set_text_static(notificationIcon, "You've got mail.");
     } else {
       lv_label_set_text_static(notificationIcon, "");
     }
+  }
+
+  if (dumbMode) {
+    lv_label_set_text_fmt(label_date, "[DATE]#007fff NO");
   }
 
   currentDateTime = dateTimeController.CurrentDateTime();
@@ -147,12 +183,14 @@ void WatchFaceTerminal::Refresh() {
     }
 
     if ((year != currentYear) || (month != currentMonth) || (dayOfWeek != currentDayOfWeek) || (day != currentDay)) {
-      lv_label_set_text_fmt(label_date, "[DATE]#007fff %04d-%02d-%02d#", short(year), char(month), char(day));
+      if (!dumbMode) {
+        lv_label_set_text_fmt(label_date, "[DATE]#007fff %04d-%02d-%02d#", short(year), char(month), char(day));
 
-      currentYear = year;
-      currentMonth = month;
-      currentDayOfWeek = dayOfWeek;
-      currentDay = day;
+        currentYear = year;
+        currentMonth = month;
+        currentDayOfWeek = dayOfWeek;
+        currentDay = day;
+      }
     }
   }
 
@@ -160,15 +198,20 @@ void WatchFaceTerminal::Refresh() {
   heartbeatRunning = heartRateController.State() != Controllers::HeartRateController::States::Stopped;
   if (heartbeat.IsUpdated() || heartbeatRunning.IsUpdated()) {
     if (heartbeatRunning.Get()) {
-      lv_label_set_text_fmt(heartbeatValue, "[L_HR]#ee3311 %d bpm#", heartbeat.Get());
+      lv_label_set_text_fmt(heartbeatValue, "[BPM ]#ee3311 %d#", heartbeat.Get());
     } else {
-      lv_label_set_text_static(heartbeatValue, "[L_HR]#ee3311 ---#");
+      lv_label_set_text_static(heartbeatValue, "[BPM ]#ee3311 0 (RIP)#");
     }
   }
 
-  stepCount = motionController.NbSteps();
-  motionSensorOk = motionController.IsSensorOk();
-  if (stepCount.IsUpdated() || motionSensorOk.IsUpdated()) {
-    lv_label_set_text_fmt(stepValue, "[STEP]#ee3377 %lu steps#", stepCount.Get());
+  if (dumbMode) {
+    lv_label_set_text_static(stepValue, "[STEP]#ee3377 0 steps loser");
+  }
+  else {
+    stepCount = motionController.NbSteps();
+    motionSensorOk = motionController.IsSensorOk();
+    if (stepCount.IsUpdated() || motionSensorOk.IsUpdated()) {
+      lv_label_set_text_fmt(stepValue, "[STEP]#ee3377 %lu steps#", stepCount.Get());
+    }
   }
 }

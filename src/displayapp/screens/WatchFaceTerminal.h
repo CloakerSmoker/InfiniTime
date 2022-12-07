@@ -32,9 +32,13 @@ namespace Pinetime {
                           Controllers::MotionController& motionController);
         ~WatchFaceTerminal() override;
 
+        bool OnTouchEvent(Pinetime::Applications::TouchEvents) override;
+
         void Refresh() override;
 
       private:
+        uint8_t dumbMode = false;
+
         uint8_t displayedHour = -1;
         uint8_t displayedMinute = -1;
         uint8_t displayedSecond = -1;

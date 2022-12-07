@@ -21,6 +21,9 @@ namespace Pinetime {
           }
           return false;
         }
+        void MakeDirty() {
+          this->isUpdated = true;
+        }
         T const& Get() {
           this->isUpdated = false;
           return value;
