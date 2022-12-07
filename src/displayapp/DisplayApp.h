@@ -45,7 +45,7 @@ namespace Pinetime {
     class DisplayApp {
     public:
       enum class States { Idle, Running };
-      enum class FullRefreshDirections { None, Up, Down, Left, Right, LeftAnim, RightAnim };
+      using FullRefreshDirections = Controllers::Settings::FullRefreshDirections;
 
       DisplayApp(Drivers::St7789& lcd,
                  Components::LittleVgl& lvgl,

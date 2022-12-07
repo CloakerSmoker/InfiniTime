@@ -48,6 +48,7 @@
 #include "displayapp/screens/settings/SettingChimes.h"
 #include "displayapp/screens/settings/SettingShakeThreshold.h"
 #include "displayapp/screens/settings/SettingBluetooth.h"
+#include "displayapp/screens/settings/SettingRefreshStyles.h"
 
 #include "libs/lv_conf.h"
 
@@ -219,8 +220,10 @@ void DisplayApp::Refresh() {
                 LoadApp(Apps::Notifications, DisplayApp::FullRefreshDirections::Down);
                 break;
               case TouchEvents::SwipeRight:
-                LoadApp(Apps::QuickSettings, DisplayApp::FullRefreshDirections::RightAnim);
+                LoadApp(Apps::QuickSettings, DisplayApp::FullRefreshDirections::Left);
                 break;
+              case TouchEvents::SwipeLeft:
+                
               case TouchEvents::DoubleTap:
                 PushMessageToSystemTask(System::Messages::GoToSleep);
                 break;
@@ -248,7 +251,7 @@ void DisplayApp::Refresh() {
           if (currentApp == Apps::Notifications) {
             LoadApp(Apps::Clock, DisplayApp::FullRefreshDirections::Up);
           } else if (currentApp == Apps::QuickSettings) {
-            LoadApp(Apps::Clock, DisplayApp::FullRefreshDirections::LeftAnim);
+            LoadApp(Apps::Clock, DisplayApp::FullRefreshDirections::Right);
           } else {
             LoadApp(Apps::Clock, DisplayApp::FullRefreshDirections::Down);
           }
@@ -383,7 +386,7 @@ void DisplayApp::LoadApp(Apps app, DisplayApp::FullRefreshDirections direction) 
                                                                motorController,
                                                                settingsController,
                                                                bleController);
-      ReturnApp(Apps::Clock, FullRefreshDirections::LeftAnim, TouchEvents::SwipeLeft);
+      ReturnApp(Apps::Clock, FullRefreshDirections::Right, TouchEvents::SwipeLeft);
       break;
     case Apps::Settings:
       currentScreen = std::make_unique<Screens::Settings>(this, settingsController);
@@ -427,6 +430,10 @@ void DisplayApp::LoadApp(Apps app, DisplayApp::FullRefreshDirections direction) 
       break;
     case Apps::SettingBluetooth:
       currentScreen = std::make_unique<Screens::SettingBluetooth>(this, settingsController);
+      ReturnApp(Apps::Settings, FullRefreshDirections::Down, TouchEvents::SwipeDown);
+      break;
+    case Apps::SettingTransitions:
+      currentScreen = std::make_unique<Screens::SettingRefreshStyles>(this, settingsController);
       ReturnApp(Apps::Settings, FullRefreshDirections::Down, TouchEvents::SwipeDown);
       break;
     case Apps::BatteryInfo:
@@ -497,7 +504,7 @@ void DisplayApp::PushMessage(Messages msg) {
 }
 
 void DisplayApp::SetFullRefresh(DisplayApp::FullRefreshDirections direction) {
-  switch (direction) {
+  switch (settingsController.RemapRefreshDirection(direction)) {
     case DisplayApp::FullRefreshDirections::Down:
       lvgl.SetFullRefresh(Components::LittleVgl::FullRefreshDirections::Down);
       break;

@@ -11,6 +11,8 @@ namespace Pinetime {
       enum class ClockType : uint8_t { H24, H12 };
       enum class Notification : uint8_t { On, Off, Sleep };
       enum class ChimesOption : uint8_t { None, Hours, HalfHours };
+      enum class RefreshStyle : uint8_t { None, Slide, MixSlide };
+      enum class FullRefreshDirections { None, Up, Down, Left, Right, LeftAnim, RightAnim };
       enum class WakeUpMode : uint8_t {
         SingleTap = 0,
         DoubleTap = 1,
@@ -251,6 +253,55 @@ namespace Pinetime {
         return bleRadioEnabled;
       };
 
+      void SetHorizontalRefresh(RefreshStyle style) {
+        if (settings.horizontalRefresh != style) {
+          settings.horizontalRefresh = style;
+          settingsChanged = true;
+        }
+      }
+
+      RefreshStyle GetHorizontalRefresh() const {
+        return settings.horizontalRefresh;
+      }
+
+      void SetVerticalRefresh(RefreshStyle style) {
+        if (settings.verticalRefresh != style) {
+          settings.verticalRefresh = style;
+          settingsChanged = true;
+        }
+      }
+
+      RefreshStyle GetVerticalRefresh() const {
+        return settings.verticalRefresh;
+      }
+
+      FullRefreshDirections PickRefreshDirection(RefreshStyle style, FullRefreshDirections slide, FullRefreshDirections mixSlide) const {
+        switch (style) {
+          case RefreshStyle::None: return FullRefreshDirections::None;
+          case RefreshStyle::Slide: return slide;
+          case RefreshStyle::MixSlide: return mixSlide;
+          default: return slide;
+        }
+      }
+
+      FullRefreshDirections RemapRefreshDirection(FullRefreshDirections original) const {
+        switch (original) {
+          case FullRefreshDirections::Left:
+          case FullRefreshDirections::LeftAnim:
+            return PickRefreshDirection(settings.horizontalRefresh, FullRefreshDirections::Left, FullRefreshDirections::LeftAnim);
+          case FullRefreshDirections::Right:
+          case FullRefreshDirections::RightAnim:
+            return PickRefreshDirection(settings.horizontalRefresh, FullRefreshDirections::Right, FullRefreshDirections::RightAnim);
+          case FullRefreshDirections::Up:
+            return PickRefreshDirection(settings.verticalRefresh, FullRefreshDirections::Up, FullRefreshDirections::Up);
+          case FullRefreshDirections::Down:
+            return PickRefreshDirection(settings.verticalRefresh, FullRefreshDirections::Down, FullRefreshDirections::Down);
+          default:
+            return original;
+        }
+      }
+
+
     private:
       Pinetime::Controllers::FS& fs;
 
@@ -273,6 +324,9 @@ namespace Pinetime {
         std::bitset<4> wakeUpMode {0};
         uint16_t shakeWakeThreshold = 150;
         Controllers::BrightnessController::Levels brightLevel = Controllers::BrightnessController::Levels::Medium;
+
+        RefreshStyle horizontalRefresh = RefreshStyle::MixSlide;
+        RefreshStyle verticalRefresh = RefreshStyle::Slide;
       };
 
       SettingsData settings;
