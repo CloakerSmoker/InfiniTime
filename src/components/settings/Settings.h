@@ -285,13 +285,16 @@ namespace Pinetime {
       }
 
       FullRefreshDirections RemapRefreshDirection(FullRefreshDirections original) const {
+        // LeftAnim/RightAnim actually refresh from the opposite direction so we handle RightAnim as a request for
+        // a "left to right" refresh and emit it if we want to use RightAnim as the horizontal "left to right" refresh
+
         switch (original) {
           case FullRefreshDirections::Left:
-          case FullRefreshDirections::LeftAnim:
-            return PickRefreshDirection(settings.horizontalRefresh, FullRefreshDirections::Left, FullRefreshDirections::LeftAnim);
-          case FullRefreshDirections::Right:
           case FullRefreshDirections::RightAnim:
-            return PickRefreshDirection(settings.horizontalRefresh, FullRefreshDirections::Right, FullRefreshDirections::RightAnim);
+            return PickRefreshDirection(settings.horizontalRefresh, FullRefreshDirections::Left, FullRefreshDirections::RightAnim);
+          case FullRefreshDirections::Right:
+          case FullRefreshDirections::LeftAnim:
+            return PickRefreshDirection(settings.horizontalRefresh, FullRefreshDirections::Right, FullRefreshDirections::LeftAnim);
           case FullRefreshDirections::Up:
             return PickRefreshDirection(settings.verticalRefresh, FullRefreshDirections::Up, FullRefreshDirections::Up);
           case FullRefreshDirections::Down:
